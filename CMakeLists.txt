@@ -8,10 +8,17 @@ get_filename_component(_wind_launcher_sdk "${Wind_DIR}/.." ABSOLUTE)
 
 # The list, SDK, project, and template logic, so wind_launcher_tests compiles the same files without the UI.
 set(_wind_launcher_parts
+    src/downloader.cpp
+    src/extractor.cpp
+    src/json.cpp
     src/launcher_state.cpp
     src/project_entry.cpp
     src/project_template.cpp
+    src/release_feed.cpp
     src/sdk_catalog.cpp
+    src/sdk_installer.cpp
+    src/sdk_release.cpp
+    src/sha256.cpp
     src/user_paths.cpp)
 
 engine_add_game(wind_launcher
@@ -35,7 +42,16 @@ if(NOT TARGET GTest::gtest_main)
     set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
     add_subdirectory("${_wind_launcher_sdk}/source/external/googletest" googletest EXCLUDE_FROM_ALL)
 endif()
-add_executable(wind_launcher_tests tests/launcher_test.cpp ${_wind_launcher_parts})
+add_executable(wind_launcher_tests
+    tests/downloader_test.cpp
+    tests/extractor_test.cpp
+    tests/json_test.cpp
+    tests/launcher_test.cpp
+    tests/release_feed_test.cpp
+    tests/sdk_installer_test.cpp
+    tests/sdk_release_test.cpp
+    tests/sha256_test.cpp
+    ${_wind_launcher_parts})
 set_target_properties(wind_launcher_tests PROPERTIES
     CXX_STANDARD 23
     CXX_STANDARD_REQUIRED ON
@@ -45,7 +61,9 @@ if(MSVC)
     set_target_properties(wind_launcher_tests PROPERTIES MSVC_RUNTIME_LIBRARY MultiThreadedDLL)
 endif()
 target_link_libraries(wind_launcher_tests PRIVATE engine GTest::gtest_main)
-target_include_directories(wind_launcher_tests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
+target_include_directories(wind_launcher_tests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src" "${CMAKE_CURRENT_SOURCE_DIR}/tests")
 # templates/, which the SDK installs: a test makes a project from it.
-target_compile_definitions(wind_launcher_tests PRIVATE WIND_SDK_TEMPLATES_DIR="${_wind_launcher_sdk}/templates")
+target_compile_definitions(wind_launcher_tests PRIVATE
+    WIND_SDK_TEMPLATES_DIR="${_wind_launcher_sdk}/templates"
+    LAUNCHER_FIXTURES_DIR="${CMAKE_CURRENT_SOURCE_DIR}/tests/fixtures")
 gtest_discover_tests(wind_launcher_tests DISCOVERY_MODE PRE_TEST)
