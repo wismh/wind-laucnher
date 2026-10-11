@@ -19,6 +19,12 @@ public:
         if (on_run) {
             on_run(desc);
         }
+        // `results` are used one by one, then `result`.
+        if (!results.empty()) {
+            const engine::ProcessResult next = results.front();
+            results.erase(results.begin());
+            return engine::ProcessCall::resolved(next, output);
+        }
         return engine::ProcessCall::resolved(result, output);
     }
     [[nodiscard]] std::expected<void, engine::ProcessError> launch(const engine::ProcessDesc&) override {
@@ -30,6 +36,7 @@ public:
 
     std::vector<engine::ProcessDesc> runs;
     engine::ProcessResult result = engine::ProcessExit{.code = 0};
+    std::vector<engine::ProcessResult> results;
     std::vector<std::string> output;
     std::function<void(const engine::ProcessDesc&)> on_run;
 };
@@ -147,13 +154,61 @@ TEST(CurlDownloader, CurlFailingReportsItsOwnMessage) {
     EXPECT_EQ(answer->error, "(22) The requested URL returned error: 404");
 }
 
+TEST(CurlDownloader, ABrokenTransferIsStartedAgain) {
+    const TempDir dir;
+    FakeLauncher launcher;
+    launcher.results = {engine::ProcessExit{.code = 56}, engine::ProcessExit{.code = 28}};  // a reset, a timeout; then fine
+    launcher::CurlDownloader downloader(launcher);
+    downloader.start(launcher::DownloadRequest{.url = "https://github.com/x", .output = dir.path() / "o.bin"});
+    EXPECT_TRUE(downloader.busy());
+    EXPECT_EQ(downloader.poll(), std::nullopt) << "the first attempt broke: no answer yet";
+    EXPECT_TRUE(downloader.busy());
+    EXPECT_EQ(downloader.poll(), std::nullopt);
+    const auto answer = downloader.poll();
+    ASSERT_TRUE(answer.has_value());
+    EXPECT_TRUE(answer->ok());
+    EXPECT_EQ(launcher.runs.size(), 3u);
+    EXPECT_FALSE(downloader.busy());
+}
+
+TEST(CurlDownloader, ItGivesUpAfterThreeAttempts) {
+    const TempDir dir;
+    FakeLauncher launcher;
+    launcher.result = engine::ProcessExit{.code = 56};
+    launcher.output = {"curl: (56) Recv failure: Connection reset by peer"};
+    launcher::CurlDownloader downloader(launcher);
+    downloader.start(launcher::DownloadRequest{.url = "https://github.com/x", .output = dir.path() / "o.bin"});
+    std::optional<launcher::DownloadResult> answer;
+    for (int i = 0; i < 10 && !answer; ++i) {
+        answer = downloader.poll();
+    }
+    ASSERT_TRUE(answer.has_value());
+    EXPECT_EQ(launcher.runs.size(), 3u);
+    EXPECT_EQ(answer->error, "(56) Recv failure: Connection reset by peer");
+}
+
+TEST(CurlDownloader, AnHttpErrorIsNotRetried) {
+    const TempDir dir;
+    FakeLauncher launcher;
+    launcher.result = engine::ProcessExit{.code = 22};
+    launcher.output = {"curl: (22) The requested URL returned error: 404"};
+    launcher::CurlDownloader downloader(launcher);
+    downloader.start(launcher::DownloadRequest{.url = "https://github.com/x", .output = dir.path() / "o.bin"});
+    const auto answer = downloader.poll();
+    ASSERT_TRUE(answer.has_value());
+    EXPECT_EQ(launcher.runs.size(), 1u);
+}
+
 TEST(CurlDownloader, CurlWithoutAMessageStillSaysSomething) {
     const TempDir dir;
     FakeLauncher launcher;
     launcher.result = engine::ProcessExit{.code = 7};
     launcher::CurlDownloader downloader(launcher);
     downloader.start(launcher::DownloadRequest{.url = "https://github.com/x", .output = dir.path() / "o.bin"});
-    const auto answer = downloader.poll();
+    std::optional<launcher::DownloadResult> answer;
+    for (int i = 0; i < 10 && !answer; ++i) {
+        answer = downloader.poll();
+    }
     ASSERT_TRUE(answer.has_value());
     EXPECT_NE(answer->error.find("exit code 7"), std::string::npos);
 }

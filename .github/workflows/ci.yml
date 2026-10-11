@@ -45,3 +45,31 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: python3 -m unittest discover -s tools -p "test_*.py"
+
+  # Installs a real SDK from GitHub's releases through the launcher's own window and removes it again (tools/e2e_install.py),
+  # on Linux only: the Windows and macOS runners have no display to drive reliably. The unit tests above run everywhere.
+  e2e:
+    name: Install an SDK (Linux)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      # The releases are public; the token only keeps the API under its rate limit.
+      GITHUB_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/build
+        with:
+          os: linux
+          configurations: DebugGame;Release
+          config: DebugGame
+          tests: "false"
+      - name: Install and remove an SDK through the launcher
+        run: |
+          xvfb-run -a -s "-screen 0 1280x800x24" python3 tools/e2e_install.py \
+            --launcher build/bin/DebugGame/wind_launcher --sdk-bin "${WIND_SDK_DIR}/bin" --out e2e-out
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-screenshots
+          path: e2e-out
+          retention-days: 14

@@ -52,7 +52,9 @@ public:
 };
 
 // The `curl` that ships with Windows 10 1803+, macOS, and every common Linux, started through IProcessLauncher: the
-// engine has no HTTP client on Linux and macOS.
+// engine has no HTTP client on Linux and macOS. A transfer that breaks (a reset connection, a timeout) is started again,
+// up to three times in all: curl's own `--retry` does not retry a reset, and `--retry-all-errors` is newer than the curl
+// of Windows 10 1803. An HTTP error (curl's exit code 22, a 404) and a program that cannot start are not retried.
 class CurlDownloader final : public IDownloader {
 public:
     explicit CurlDownloader(engine::IProcessLauncher& processes);
@@ -63,11 +65,16 @@ public:
     void cancel() override;
 
 private:
+    void run_curl();
+
     engine::IProcessLauncher* processes_;
     engine::ProcessCall call_;
     DownloadRequest request_;
     std::filesystem::path header_input_;
     std::vector<std::string> output_;
+    int attempts_ = 0;
+    // From start() until poll() has given the answer or cancel(): a finished call is not pending, but is not answered yet.
+    bool active_ = false;
 };
 
 // The arguments of the `curl` call for `request`; `header_input` is the file with the request headers, passed as

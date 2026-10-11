@@ -23,6 +23,7 @@ set(_wind_launcher_parts
 
 engine_add_game(wind_launcher
     src/main.cpp
+    src/available_sdk_row_view_model.cpp
     src/launcher_app.cpp
     src/launcher_view_model.cpp
     src/project_row_view_model.cpp

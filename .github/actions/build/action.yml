@@ -8,6 +8,20 @@ inputs:
   os:
     description: linux, macos, or windows
     required: true
+  configurations:
+    description: >
+      CMAKE_CONFIGURATION_TYPES of the export build. DebugGame (the Development player) is the one with the CLI server
+      the end-to-end test drives.
+    required: false
+    default: Release
+  config:
+    description: The configuration to build.
+    required: false
+    default: Release
+  tests:
+    description: Run wind_launcher_tests. When false only wind_launcher is built.
+    required: false
+    default: "true"
 
 runs:
   using: composite
@@ -35,11 +49,17 @@ runs:
           generator="Ninja Multi-Config"
         fi
         cmake -S . -B build -G "${generator}" -DWIND_EXPORT=ON -DCMAKE_PREFIX_PATH="${WIND_SDK_DIR}" \
-          -DWind_DIR="${WIND_SDK_DIR}/cmake" -DCMAKE_CONFIGURATION_TYPES=Release
+          -DWind_DIR="${WIND_SDK_DIR}/cmake" "-DCMAKE_CONFIGURATION_TYPES=${{ inputs.configurations }}"
     - name: Build
       shell: bash
-      run: cmake --build build --config Release --parallel
+      run: |
+        if [ "${{ inputs.tests }}" = "true" ]; then
+          cmake --build build --config ${{ inputs.config }} --parallel
+        else
+          cmake --build build --config ${{ inputs.config }} --target wind_launcher --parallel
+        fi
     - name: Tests
+      if: inputs.tests == 'true'
       shell: bash
       # A CI machine has no sound card: SDL's dummy driver stands in.
       env:
@@ -47,7 +67,7 @@ runs:
         LIBGL_ALWAYS_SOFTWARE: "1"
       run: |
         if [ "${{ inputs.os }}" = "linux" ]; then
-          xvfb-run -a ctest --test-dir build -C Release --output-on-failure --parallel 4
+          xvfb-run -a ctest --test-dir build -C ${{ inputs.config }} --output-on-failure --parallel 4
         else
-          ctest --test-dir build -C Release --output-on-failure --parallel 4
+          ctest --test-dir build -C ${{ inputs.config }} --output-on-failure --parallel 4
         fi

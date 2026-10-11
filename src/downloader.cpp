@@ -110,7 +110,7 @@ CurlDownloader::CurlDownloader(engine::IProcessLauncher& processes)
     : processes_(&processes) {}
 
 bool CurlDownloader::busy() const {
-    return call_.pending();
+    return active_;
 }
 
 void CurlDownloader::start(DownloadRequest request) {
@@ -134,13 +134,20 @@ void CurlDownloader::start(DownloadRequest request) {
             out << "Authorization: Bearer " << request_.bearer_token << '\n';
         }
     }
+    attempts_ = 0;
+    active_ = true;
+    run_curl();
+}
+
+void CurlDownloader::run_curl() {
+    ++attempts_;
+    output_.clear();
+    std::error_code error;
+    std::filesystem::remove(request_.output, error);
     call_ = processes_->run(engine::ProcessDesc{.program = "curl", .arguments = curl_arguments(request_, header_input_)});
 }
 
 std::optional<DownloadResult> CurlDownloader::poll() {
-    if (!call_.pending() && output_.empty()) {
-        // Nothing started, or already answered: take() below is nullopt then.
-    }
     for (std::string& line : call_.take_output()) {
         output_.push_back(std::move(line));
     }
@@ -148,6 +155,13 @@ std::optional<DownloadResult> CurlDownloader::poll() {
     if (!result) {
         return std::nullopt;
     }
+    constexpr int kMaxAttempts = 3;
+    constexpr int kHttpError = 22;
+    if (*result && result->value().code != 0 && result->value().code != kHttpError && attempts_ < kMaxAttempts) {
+        run_curl();
+        return std::nullopt;
+    }
+    active_ = false;
     std::error_code error;
     if (!header_input_.empty()) {
         std::filesystem::remove(header_input_, error);
@@ -176,6 +190,7 @@ std::optional<DownloadResult> CurlDownloader::poll() {
 }
 
 void CurlDownloader::cancel() {
+    active_ = false;
     call_.cancel();
     std::error_code error;
     if (!header_input_.empty()) {

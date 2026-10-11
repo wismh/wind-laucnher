@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstddef>
+#include <string>
 
 namespace launcher {
 
@@ -19,11 +20,17 @@ struct LauncherRequest {
         ShowSdk,
         ForgetSdk,
         DeleteSdk,
+        InstallSdk,
+        InstallVersion,
+        CancelInstall,
+        RefreshAvailable,
     };
 
     Kind kind = Kind::None;
-    // The project row (Open, Remove) or SDK row (ShowSdk, ForgetSdk, DeleteSdk).
+    // The project row (Open, Remove), SDK row (ShowSdk, ForgetSdk, DeleteSdk), or Available row (InstallSdk).
     std::size_t index = 0;
+    // InstallVersion: the version a project needs, by exact text.
+    std::string version;
 };
 
 }
