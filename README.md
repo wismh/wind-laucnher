@@ -76,3 +76,7 @@ xvfb-run -a python3 tools/e2e_install.py --launcher build-dev/bin/DebugGame/wind
 ## Releases
 
 Every push to `main` builds, tests, and publishes a release (`.github/workflows/release.yml`). The version is `version.txt` (`0.1a`: major 0, minor 1, alpha) plus a patch counted from the existing tags. `ci.yml` builds and tests every push and pull request on the three systems. `gh workflow run release.yml --ref <branch> -f publish=false` is a dry run that publishes nothing.
+
+## License
+
+The Wind Launcher is licensed under the [Apache License, Version 2.0](LICENSE). It is built against the Wind engine SDK, which is licensed under the same license.
