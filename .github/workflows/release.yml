@@ -8,6 +8,8 @@ name: Release
 #   gh workflow run release.yml --ref <branch> -f publish=false     a dry run: everything but the publish job
 
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
     inputs:
       publish:
@@ -72,7 +74,7 @@ jobs:
   publish:
     name: Publish ${{ needs.version.outputs.version }}
     needs: [version, build]
-    if: inputs.publish
+    if: github.event_name == 'push' || inputs.publish
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     permissions:

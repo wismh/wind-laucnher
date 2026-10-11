@@ -1,0 +1,53 @@
+name: Build the launcher
+description: >
+  Installs the Wind SDK named in wind_project.toml (setup-wind of wismh/wind-engine), configures the launcher like an
+  export build, builds Release, and runs wind_launcher_tests. The result is build/bin/Release/ (the executable and
+  assets/).
+
+inputs:
+  os:
+    description: linux, macos, or windows
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Packages
+      if: inputs.os == 'linux'
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y --no-install-recommends ninja-build xvfb \
+          libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxfixes-dev libxi-dev libxss-dev libxtst-dev \
+          libxkbcommon-dev libwayland-dev libdecor-0-dev libdrm-dev libgbm-dev libgl1-mesa-dev libgles2-mesa-dev \
+          libegl1-mesa-dev libgl1-mesa-dri libasound2-dev libpulse-dev libudev-dev libdbus-1-dev libibus-1.0-dev
+    - name: Packages
+      if: inputs.os == 'macos'
+      shell: bash
+      run: brew install ninja
+    - uses: wismh/wind-engine/.github/actions/setup-wind@main
+    - name: Configure
+      shell: bash
+      run: |
+        if [ "${{ inputs.os }}" = "windows" ]; then
+          generator="Visual Studio 18 2026"
+        else
+          generator="Ninja Multi-Config"
+        fi
+        cmake -S . -B build -G "${generator}" -DWIND_EXPORT=ON -DCMAKE_PREFIX_PATH="${WIND_SDK_DIR}" \
+          -DWind_DIR="${WIND_SDK_DIR}/cmake" -DCMAKE_CONFIGURATION_TYPES=Release
+    - name: Build
+      shell: bash
+      run: cmake --build build --config Release --parallel
+    - name: Tests
+      shell: bash
+      # A CI machine has no sound card: SDL's dummy driver stands in.
+      env:
+        SDL_AUDIODRIVER: dummy
+        LIBGL_ALWAYS_SOFTWARE: "1"
+      run: |
+        if [ "${{ inputs.os }}" = "linux" ]; then
+          xvfb-run -a ctest --test-dir build -C Release --output-on-failure --parallel 4
+        else
+          ctest --test-dir build -C Release --output-on-failure --parallel 4
+        fi
