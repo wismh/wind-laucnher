@@ -79,4 +79,4 @@ Every push to `main` builds, tests, and publishes a release (`.github/workflows/
 
 ## License
 
-The Wind Launcher is licensed under the [Apache License, Version 2.0](LICENSE). It is built against the Wind engine SDK, which is licensed under the same license.
+Copyright 2026 Yevhenii Tertychnyi. The Wind Launcher is licensed under the [Apache License, Version 2.0](LICENSE) (see also [NOTICE](NOTICE)). It is built against the Wind engine SDK, which is licensed under the same license.
