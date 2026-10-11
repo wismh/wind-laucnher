@@ -13,11 +13,11 @@ These links always point to the newest launcher (the `latest` release is rebuilt
 
 | System | Download |
 | --- | --- |
-| Windows (x86_64) | [wind-launcher-windows-x86_64.zip](https://github.com/wismh/wind-laucnher/releases/latest/download/wind-launcher-windows-x86_64.zip) |
-| Linux (x86_64) | [wind-launcher-linux-x86_64.tar.gz](https://github.com/wismh/wind-laucnher/releases/latest/download/wind-launcher-linux-x86_64.tar.gz) |
-| macOS (Apple silicon, arm64) | [wind-launcher-macos-arm64.tar.gz](https://github.com/wismh/wind-laucnher/releases/latest/download/wind-launcher-macos-arm64.tar.gz) |
+| Windows (x86_64) | [wind-launcher-windows-x86_64.zip](https://github.com/wismh/wind-launcher/releases/latest/download/wind-launcher-windows-x86_64.zip) |
+| Linux (x86_64) | [wind-launcher-linux-x86_64.tar.gz](https://github.com/wismh/wind-launcher/releases/latest/download/wind-launcher-linux-x86_64.tar.gz) |
+| macOS (Apple silicon, arm64) | [wind-launcher-macos-arm64.tar.gz](https://github.com/wismh/wind-launcher/releases/latest/download/wind-launcher-macos-arm64.tar.gz) |
 
-Every launcher version is also a release of its own, `v<major>.<minor>.<patch><stage>` (`a` alpha, `b` beta, none for production), on the [Releases](https://github.com/wismh/wind-laucnher/releases) page, with a `.sha256` file for each archive. The launcher versions are independent of the engine versions. Unpack the archive anywhere and run `wind_launcher` (`wind_launcher.exe`); `assets/` has to stay beside it.
+Every launcher version is also a release of its own, `v<major>.<minor>.<patch><stage>` (`a` alpha, `b` beta, none for production), on the [Releases](https://github.com/wismh/wind-launcher/releases) page, with a `.sha256` file for each archive. The launcher versions are independent of the engine versions. Unpack the archive anywhere and run `wind_launcher` (`wind_launcher.exe`); `assets/` has to stay beside it.
 
 Supported: Windows 10 and later (x86_64), Linux x86_64 with a desktop and OpenGL, macOS 14 and later on Apple silicon.
 
