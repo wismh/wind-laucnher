@@ -98,13 +98,18 @@ Label {
   align-items: center;
 }
 
-/* Beside the buttons: Add existing 130 and New project 130; Open folder 120 and Locate 100; 10 px per gap. */
+/* Beside the buttons: Add existing 130 and New project 130; Open folder 120, Locate 100 and Install SDK 130; Refresh 100
+   and Back 100; 10 px per gap. */
 .projects-header .heading {
   width: calc(100% - 280px);
 }
 
 .sdks-header .heading {
-  width: calc(100% - 240px);
+  width: calc(100% - 380px);
+}
+
+.install-header .heading {
+  width: calc(100% - 220px);
 }
 
 .heading {
@@ -138,6 +143,18 @@ Label {
   width: 100;
 }
 
+.install-sdk-button {
+  width: 130;
+}
+
+.refresh-button {
+  width: 100;
+}
+
+.back-button {
+  width: 100;
+}
+
 ScrollView.box {
   width: 100%;
   height: calc(100% - 72px);
@@ -149,36 +166,6 @@ ScrollView.box {
   overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-color: #4e5157 #2b2d30;
-}
-
-/* The SDKs page: the header (64 px), "Installed" (32), its list, "Available" (32), its list. The lists share what is
-   left: calc(30% - 40px) and calc(70% - 88px) add up to calc(100% - 128px). */
-ScrollView.installed-box {
-  height: calc(30% - 40px);
-}
-
-ScrollView.available-box {
-  height: calc(70% - 88px);
-}
-
-.section-header {
-  width: 100%;
-  height: 32;
-  gap: 12;
-  align-items: center;
-}
-
-.section-title {
-  width: 90;
-  font-size: 15;
-  color: #dfe1e5;
-}
-
-/* Beside the note: the title 90, Refresh 84, two gaps 24. */
-.section-note {
-  width: calc(100% - 198px);
-  font-size: 12;
-  color: #8c9096;
 }
 
 /* An available row: padding 18, version 70, Install 120 (Cancel is 84), three gaps 30 = 238 px beside the text. */

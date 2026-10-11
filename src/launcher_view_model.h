@@ -26,11 +26,13 @@ public:
     engine::ui::Bindable<std::string> projectsDisplay{std::string("block")};
     engine::ui::Bindable<std::string> sdksDisplay{std::string("none")};
     engine::ui::Bindable<std::string> newProjectDisplay{std::string("none")};
+    // The Install SDK page, reached from SDKs (which keeps its tab checked).
+    engine::ui::Bindable<std::string> availableDisplay{std::string("none")};
 
     engine::ui::BindableList<std::shared_ptr<ProjectRowViewModel>> projects;
     engine::ui::BindableList<std::shared_ptr<SdkRowViewModel>> sdks;
-    // The SDKs GitHub offers for this platform, newest first, and a line about the list: "Checking GitHub…", "offline:
-    // showing the list from 2026-10-10", or empty.
+    // The SDKs GitHub offers for this platform, newest first (the Install SDK page), and a line about the list:
+    // "Checking GitHub…", "offline: showing the list from 2026-10-10", or empty.
     engine::ui::BindableList<std::shared_ptr<AvailableSdkRowViewModel>> available;
     engine::ui::Bindable<std::string> availableNote;
     // Where SDKs are installed, or why there is no such directory.
@@ -51,6 +53,8 @@ public:
 
     MethodCommand showProjects;
     MethodCommand showSdks;
+    MethodCommand installSdk;
+    MethodCommand closeInstallSdk;
     MethodCommand addProject;
     MethodCommand newProject;
     MethodCommand locateSdk;

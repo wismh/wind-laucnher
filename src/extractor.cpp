@@ -6,13 +6,50 @@
 namespace launcher {
 namespace {
 
-std::string last_line(const std::vector<std::string>& lines) {
-    for (auto it = lines.rbegin(); it != lines.rend(); ++it) {
-        if (!it->empty()) {
-            return *it;
+// What tar says went wrong: its last "tar: ..." line that is not the generic "Error exit delayed from previous
+// errors" (which only repeats that an earlier line was an error), or else the last line.
+// The entries tar reports as "<entry>: Can't create '<path>'", or nothing when it said anything else too.
+std::vector<std::string> creation_failures(const std::vector<std::string>& lines) {
+    constexpr std::string_view kMarker = ": Can't create '";
+    std::vector<std::string> entries;
+    for (const std::string& line : lines) {
+        if (line.empty() || line.find("delayed from previous errors") != std::string::npos) {
+            continue;
+        }
+        const std::size_t at = line.find(kMarker);
+        if (at == std::string::npos) {
+            return {};
+        }
+        entries.push_back(line.substr(0, at));
+    }
+    return entries;
+}
+
+// Whether the verbose listing (`tar -tvf`) shows `entry` as a symbolic link: a line that starts with `l` and has
+// "<entry> -> <target>".
+bool is_link(const std::vector<std::string>& listing, std::string entry) {
+    while (!entry.empty() && entry.back() == '/') {
+        entry.pop_back();
+    }
+    const std::string needle = " " + entry + " -> ";
+    return std::ranges::any_of(listing, [&](const std::string& line) {
+        return line.starts_with('l') && line.find(needle) != std::string::npos;
+    });
+}
+
+std::string failure_reason(const std::vector<std::string>& lines) {
+    std::string last;
+    std::string error;
+    for (const std::string& line : lines) {
+        if (line.empty()) {
+            continue;
+        }
+        last = line;
+        if (line.starts_with("tar:") && line.find("delayed from previous errors") == std::string::npos) {
+            error = line;
         }
     }
-    return {};
+    return error.empty() ? last : error;
 }
 
 // The components of a '/'-separated name; a trailing separator and "." components are dropped.
@@ -132,8 +169,21 @@ std::optional<ExtractResult> TarExtractor::poll() {
                             : "tar could not start.");
     }
     if (result->value().code != 0) {
-        const std::string reason = last_line(output_);
-        return fail("tar could not read the archive" + (reason.empty() ? std::string{} : ": " + reason));
+        const std::string reason = failure_reason(output_);
+        std::string message = "tar could not read the archive" + (reason.empty() ? std::string{} : ": " + reason);
+        if (step_ == Step::Unpacking) {
+            failed_entries_ = creation_failures(output_);
+            if (!failed_entries_.empty()) {
+                // Only entries that could not be created: fine when they are all links, which the listing tells.
+                unpack_reason_ = std::move(message);
+                output_.clear();
+                step_ = Step::Links;
+                call_ = processes_->run(engine::ProcessDesc{
+                        .program = "tar", .arguments = {"-tvf", request_.archive.generic_string()}});
+                return std::nullopt;
+            }
+        }
+        return fail(std::move(message));
     }
 
     if (step_ == Step::Listing) {
@@ -150,6 +200,12 @@ std::optional<ExtractResult> TarExtractor::poll() {
         call_ = processes_->run(engine::ProcessDesc{.program = "tar",
                 .arguments = {"-xf", request_.archive.generic_string(), "-C", request_.destination.generic_string()}});
         return std::nullopt;
+    }
+
+    if (step_ == Step::Links) {
+        if (!std::ranges::all_of(failed_entries_, [&](const std::string& entry) { return is_link(output_, entry); })) {
+            return fail(std::move(unpack_reason_));
+        }
     }
 
     step_ = Step::Idle;

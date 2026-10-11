@@ -133,6 +133,16 @@ TEST_F(RealTar, UnpacksAZip) {
 }
 #endif
 
+// The engine's SDK carries four macOS symbolic links in source/. A link cannot be created on Windows without a privilege:
+// tar says so and exits 1, but the rest is there, and that is not a failed install.
+TEST_F(RealTar, ALinkThatCannotBeCreatedDoesNotFailTheUnpacking) {
+    write_tar(dir_.path() / "links.tar", {{.name = "wind-sdk-1/sdk.toml", .content = "x"},
+                                          {.name = "wind-sdk-1/Current", .type = '2', .link = "sdk.toml"}});
+    const launcher::ExtractResult result = extract(dir_.path() / "links.tar", "wind-sdk-1");
+    EXPECT_TRUE(result.ok()) << result.error;
+    EXPECT_TRUE(std::filesystem::exists(dir_.path() / "out/wind-sdk-1/sdk.toml"));
+}
+
 TEST_F(RealTar, AZipSlipArchiveIsRefusedBeforeAnythingIsWritten) {
     write_tar(dir_.path() / "evil.tar", {{.name = "wind-sdk-1/sdk.toml", .content = "x"},
                                                 {.name = "../evil.txt", .content = "pwned"}});

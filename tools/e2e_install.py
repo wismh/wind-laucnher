@@ -6,8 +6,8 @@
 
 The launcher has to be a Development build (the DebugGame configuration of the export build): only that has the CLI
 server wind-cli talks to. The launcher runs with a temporary home, so it reads and writes nothing of the real user's.
-It opens the SDKs page, waits for the Available list from GitHub, presses Install on a row (default: the newest),
-waits until the row says Installed, checks sdk-<version>/ on disk (sdk.toml, the editor, `wind_editor --batch` printing
+It opens the SDKs page and its Install SDK page, waits for the Available list from GitHub, presses Install on a row
+(default: the newest), waits until the row says Installed, checks sdk-<version>/ on disk (sdk.toml, the editor, `wind_editor --batch` printing
 its usage error), then deletes the SDK from the Installed list and checks that the directory is gone. Screenshots of the
 page before, during, and after the install, and after the delete, go to --out. Exit code 0 when all of it held.
 
@@ -28,8 +28,10 @@ from pathlib import Path
 
 ITEM = 2147483648  # the path index of the first row of a virtualized list
 
-INSTALLED = [0, 1, 1, 2, 0]
-AVAILABLE = [0, 1, 1, 4, 0]
+INSTALLED = [0, 1, 1, 1, 0]
+AVAILABLE = [0, 1, 2, 1, 0]
+INSTALL_SDK_BUTTON = [0, 1, 1, 0, 3]  # "Install SDK…" on the SDKs page, which opens the Install SDK page
+BACK_BUTTON = [0, 1, 2, 0, 2]  # "Back" on the Install SDK page
 VERSION = re.compile(r"^[0-9]+\.[0-9]+\.[0-9]+[ab]?$")
 
 
@@ -144,6 +146,7 @@ def main(argv=None):
         log("launcher is up (pid %d), home %s" % (launcher.pid, root))
 
         cli.click([0, 0, 2])  # the SDKs tab
+        cli.click(INSTALL_SDK_BUTTON)
         available = wait_for("the Available list", lambda: rows(cli, AVAILABLE), 90)
         log("available: %s" % ", ".join(v for _, v in available))
         item, version = next(((i, v) for i, v in available if args.version in (None, v)), (None, None))
@@ -198,6 +201,7 @@ def main(argv=None):
             raise Failure("left in the install directory: %s" % leftovers)
 
         # The Installed list shows it; delete it from there.
+        cli.click(BACK_BUTTON)
         installed = wait_for("the Installed list", lambda: rows(cli, INSTALLED), 30)
         row = next(i for i, v in installed if v == version)
         cli.click(INSTALLED + [row, 2])  # the ··· button

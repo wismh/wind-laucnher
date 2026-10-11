@@ -48,6 +48,7 @@ public:
     // Navbar and page buttons.
     void show_projects();
     void show_sdks();
+    void show_install_sdk();
     void add_project();
     void new_project();
     void locate_sdk();
@@ -69,6 +70,7 @@ private:
     enum class Page {
         Projects,
         Sdks,
+        InstallSdk,
         NewProject,
     };
 
