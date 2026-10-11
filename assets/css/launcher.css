@@ -143,6 +143,10 @@ Label {
   width: 100;
 }
 
+.cancel-button {
+  width: 120;
+}
+
 .install-sdk-button {
   width: 130;
 }
@@ -231,10 +235,55 @@ ItemsControl.rows {
   background: #ffffff0d;
 }
 
-/* A project row: padding 18, engine 130, Open 84 or Install 120, Remove 84, three gaps 30 = 382 px beside the text. */
+/* A project row: padding 18, the SDK button 130, ··· 34, two gaps 20 = 202 px beside the text. The text is a button of
+   its own: it opens the project. */
 .row-text {
-  width: calc(100% - 382px);
+  width: calc(100% - 202px);
+  height: 100%;
   gap: 2;
+  justify-content: center;
+}
+
+.row-text:hover {
+  background: #ffffff0d;
+}
+
+/* --tone is red when the project's SDK is missing (LauncherApp). */
+Button.sdk-button {
+  width: 130;
+  height: 30;
+  padding: 0 8 0 8;
+  font-size: 13;
+  color: var(--tone, #8c9096);
+  background: #2b2d30;
+}
+
+Button.sdk-button:hover {
+  background: #4b4f53;
+}
+
+Button.install-item {
+  display: var(--display, none);
+  color: #ffffff;
+  background: #2f7d36;
+}
+
+Button.install-item:hover {
+  background: #3a9142;
+}
+
+Button.install-item:disabled {
+  color: #8a8f96;
+  background: #34413a;
+}
+
+ItemsControl.sdk-choices {
+  width: 180;
+}
+
+Button.menu-item:checked {
+  color: #ffffff;
+  background: #3c3f41;
 }
 
 /* An SDK row: padding 18, version 70, ··· 34, two gaps 20 = 142 px beside the text. */
@@ -251,13 +300,6 @@ ItemsControl.rows {
 .path {
   font-size: 12;
   color: #8c9096;
-}
-
-/* --tone is red when the project's SDK is missing (LauncherApp). */
-.engine {
-  width: 130;
-  font-size: 13;
-  color: var(--tone, #8c9096);
 }
 
 .version {

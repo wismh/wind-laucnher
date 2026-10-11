@@ -27,6 +27,7 @@ engine_add_game(wind_launcher
     src/launcher_app.cpp
     src/launcher_view_model.cpp
     src/project_row_view_model.cpp
+    src/project_sdk_choice_view_model.cpp
     src/sdk_option_view_model.cpp
     src/sdk_row_view_model.cpp
     ${_wind_launcher_parts})

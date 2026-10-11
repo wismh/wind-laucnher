@@ -353,3 +353,28 @@ TEST(ProjectTemplate, TheEnginesOwnTemplateNamesEveryPlaceholder) {
         EXPECT_EQ(text.find("{{"), std::string::npos) << file.path() << " keeps a placeholder";
     }
 }
+
+TEST(ProjectEngine, ReplacesTheValueAndKeepsTheRestOfTheFile) {
+    TempDir dir;
+    dir.write("game/wind_project.toml",
+            "# mine\r\nname = \"Game\"\r\nengine = \"0.1.0a\"  # pinned\r\ntarget = \"game\"\r\n");
+    ASSERT_TRUE(launcher::set_project_engine(dir.path() / "game", "0.1.4a"));
+    EXPECT_EQ(launcher_test::read_file(dir.path() / "game/wind_project.toml"),
+            "# mine\r\nname = \"Game\"\r\nengine = \"0.1.4a\"  # pinned\r\ntarget = \"game\"\r\n");
+    const launcher::ProjectEntry entry = launcher::read_project_entry(dir.path() / "game");
+    ASSERT_TRUE(entry.project.has_value());
+    EXPECT_EQ(entry.project->engine, "0.1.4a");
+}
+
+TEST(ProjectEngine, AddsTheKeyWhenThereIsNoneAndSkipsLookAlikes) {
+    TempDir dir;
+    dir.write("game/wind_project.toml", "name = \"Game\"\nengine_note = \"x\"\ntarget = \"game\"");
+    ASSERT_TRUE(launcher::set_project_engine(dir.path() / "game", "0.2.0"));
+    EXPECT_EQ(launcher_test::read_file(dir.path() / "game/wind_project.toml"),
+            "name = \"Game\"\nengine_note = \"x\"\ntarget = \"game\"\nengine = \"0.2.0\"\n");
+}
+
+TEST(ProjectEngine, AMissingFileIsAnError) {
+    TempDir dir;
+    EXPECT_FALSE(launcher::set_project_engine(dir.path() / "nowhere", "0.2.0"));
+}

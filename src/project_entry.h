@@ -2,9 +2,11 @@
 
 #include <engine/project/wind_project.h>
 
+#include <expected>
 #include <filesystem>
 #include <optional>
 #include <string>
+#include <string_view>
 
 namespace launcher {
 
@@ -17,5 +19,10 @@ struct ProjectEntry {
 };
 
 [[nodiscard]] ProjectEntry read_project_entry(const std::filesystem::path& directory);
+
+// Writes `engine = "<version>"` into `<directory>/wind_project.toml`: replaces the value of the `engine` key in place, or
+// adds the key at the end when there is none. Everything else in the file, comments and line endings included, stays.
+[[nodiscard]] std::expected<void, std::string> set_project_engine(
+        const std::filesystem::path& directory, std::string_view version);
 
 }
