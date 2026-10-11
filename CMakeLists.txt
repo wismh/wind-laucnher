@@ -3,6 +3,8 @@ project(wind_launcher LANGUAGES CXX)
 
 # The Wind SDK. CMAKE_PREFIX_PATH / Wind_DIR point at it (docs/manual/platforms/Desktop.md, "Exporting without a window").
 find_package(Wind REQUIRED)
+# The SDK root. WIND_SDK_DIR is set only when the SDK has player libraries; a source build (macOS) leaves it unset.
+get_filename_component(_wind_launcher_sdk "${Wind_DIR}/.." ABSOLUTE)
 
 # The list, SDK, project, and template logic, so wind_launcher_tests compiles the same files without the UI.
 set(_wind_launcher_parts
@@ -26,6 +28,13 @@ target_include_directories(wind_launcher PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/sr
 
 enable_testing()
 include(GoogleTest)
+if(NOT TARGET GTest::gtest_main)
+    # An export build that compiles the engine from <sdk>/source (no player libraries) does not import GoogleTest;
+    # the SDK ships it beside the engine's source.
+    set(INSTALL_GTEST OFF CACHE BOOL "" FORCE)
+    set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+    add_subdirectory("${_wind_launcher_sdk}/source/external/googletest" googletest EXCLUDE_FROM_ALL)
+endif()
 add_executable(wind_launcher_tests tests/launcher_test.cpp ${_wind_launcher_parts})
 set_target_properties(wind_launcher_tests PROPERTIES
     CXX_STANDARD 23
@@ -38,5 +47,5 @@ endif()
 target_link_libraries(wind_launcher_tests PRIVATE engine GTest::gtest_main)
 target_include_directories(wind_launcher_tests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
 # templates/, which the SDK installs: a test makes a project from it.
-target_compile_definitions(wind_launcher_tests PRIVATE WIND_SDK_TEMPLATES_DIR="${WIND_SDK_DIR}/templates")
+target_compile_definitions(wind_launcher_tests PRIVATE WIND_SDK_TEMPLATES_DIR="${_wind_launcher_sdk}/templates")
 gtest_discover_tests(wind_launcher_tests DISCOVERY_MODE PRE_TEST)
