@@ -370,8 +370,8 @@ TEST(ProjectTemplate, AMissingTemplateMakesNothing) {
 }
 
 TEST(ProjectTemplate, TheEnginesOwnTemplateNamesEveryPlaceholder) {
-    // templates/empty in this repo, the one the SDK installs: it makes a project that reads back.
-    const std::filesystem::path engine_template = std::filesystem::path(WIND_ENGINE_SOURCE_DIR) / "templates" / "empty";
+    // templates/empty of the SDK: it makes a project that reads back.
+    const std::filesystem::path engine_template = std::filesystem::path(WIND_SDK_TEMPLATES_DIR) / "empty";
     ASSERT_TRUE(std::filesystem::is_directory(engine_template));
     const TempDir dir;
     const launcher::NewProject project{

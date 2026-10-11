@@ -1,0 +1,117 @@
+name: Release
+
+# Every push to main is a release of the launcher, with its own version (tools/next_version.py: version.txt gives the
+# major, the minor, and the stage; the patch is counted from the tags). The launcher is built, tested, and packed on
+# Linux, macOS, and Windows, and published as the GitHub Release v<version> (a pre-release for the stages a and b). The
+# release `latest` is kept besides it, with the same archives under names without a version, so that a stable download
+# link exists while every version is a pre-release.
+#   gh workflow run release.yml --ref <branch> -f publish=false     a dry run: everything but the publish job
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: Publish the GitHub Releases (false is a dry run)
+        type: boolean
+        default: false
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  version:
+    name: Next version
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    outputs:
+      version: ${{ steps.next.outputs.version }}
+      prerelease: ${{ steps.next.outputs.prerelease }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Next version
+        id: next
+        run: python3 tools/next_version.py --github-output
+
+  build:
+    name: ${{ matrix.name }} ${{ needs.version.outputs.version }}
+    needs: version
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: Linux, runner: ubuntu-24.04, os: linux, arch: x86_64 }
+          - { name: macOS, runner: macos-14, os: macos, arch: arm64 }
+          - { name: Windows, runner: windows-2025-vs2026, os: windows, arch: x86_64 }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/build
+        with:
+          os: ${{ matrix.os }}
+      - name: Package
+        shell: bash
+        run: |
+          PY=python3
+          command -v python3 >/dev/null 2>&1 || PY=python
+          "$PY" tools/package.py --bin build/bin/Release --version "${{ needs.version.outputs.version }}" \
+            --os ${{ matrix.os }} --arch ${{ matrix.arch }} --out dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wind-launcher-${{ matrix.os }}-${{ matrix.arch }}
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    name: Publish ${{ needs.version.outputs.version }}
+    needs: [version, build]
+    if: github.event_name == 'push' || inputs.publish
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      VERSION: ${{ needs.version.outputs.version }}
+      PRERELEASE: ${{ needs.version.outputs.prerelease }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: wind-launcher-*
+          merge-multiple: true
+          path: dist
+      - name: Release v${{ needs.version.outputs.version }}
+        run: |
+          ls -l dist
+          test "$(ls dist/*.sha256 | wc -l)" = 3
+          test "$(ls dist | wc -l)" = 6
+          flags="--latest=false"
+          if [ "${PRERELEASE}" = "true" ]; then flags="--prerelease"; fi
+          gh release create "v${VERSION}" dist/* --repo "${{ github.repository }}" --target "${{ github.sha }}" \
+            --title "Wind Launcher ${VERSION}" --generate-notes ${flags}
+      - name: The rolling release `latest`
+        run: |
+          # The same archives without a version in the name: .../releases/latest/download/wind-launcher-<os>-<arch>.<ext>
+          mkdir -p rolling
+          for f in dist/wind-launcher-${VERSION}-*; do
+            case "${f}" in *.sha256) continue ;; esac
+            name="$(basename "${f}")"
+            plain="${name/-${VERSION}-/-}"
+            cp "${f}" "rolling/${plain}"
+            (cd rolling && sha256sum "${plain}" > "${plain}.sha256")
+          done
+          ls -l rolling
+          test "$(ls rolling | wc -l)" = 6
+          gh release delete latest --repo "${{ github.repository }}" --cleanup-tag --yes || true
+          gh release create latest rolling/* --repo "${{ github.repository }}" --target "${{ github.sha }}" \
+            --title "Latest launcher" --latest \
+            --notes "The newest launcher, ${VERSION}: [release v${VERSION}](https://github.com/${{ github.repository }}/releases/tag/v${VERSION}). These files have no version in their names, so the download links stay the same."
