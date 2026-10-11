@@ -1,6 +1,0 @@
-/home/user/wind-laucnher/build/CMakeFiles/wind_launcher.dir
-/home/user/wind-laucnher/build/CMakeFiles/wind_launcher_assets.dir
-/home/user/wind-laucnher/build/CMakeFiles/wind_launcher_tests.dir
-/home/user/wind-laucnher/build/CMakeFiles/test.dir
-/home/user/wind-laucnher/build/CMakeFiles/edit_cache.dir
-/home/user/wind-laucnher/build/CMakeFiles/rebuild_cache.dir
