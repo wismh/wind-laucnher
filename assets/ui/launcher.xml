@@ -40,11 +40,9 @@
           </Stack>
           <Button class="tool-button folder-button" command="{binding showSdkFolder}" content="Open folder"/>
           <Button class="tool-button locate-button" command="{binding locateSdk}" content="Locate…"/>
+          <Button class="tool-button new-button install-sdk-button" command="{binding installSdk}" content="Install SDK…"/>
         </Stack>
-        <Stack class="section-header" direction="horizontal">
-          <Label class="section-title" text="Installed"/>
-        </Stack>
-        <ScrollView class="box installed-box">
+        <ScrollView class="box">
           <ItemsControl class="rows" items_source="{binding sdks}">
             <ItemTemplate>
               <Stack class="row" direction="horizontal">
@@ -71,12 +69,17 @@
             </ItemTemplate>
           </ItemsControl>
         </ScrollView>
-        <Stack class="section-header" direction="horizontal">
-          <Label class="section-title" text="Available"/>
-          <Label class="section-note" text="{binding availableNote}"/>
-          <Button class="small-button refresh-button" command="{binding refreshAvailable}" content="Refresh"/>
+      </Stack>
+      <Stack class="page" direction="vertical" var-display="{binding availableDisplay}">
+        <Stack class="page-header install-header" direction="horizontal">
+          <Stack class="heading" direction="vertical">
+            <Label class="page-title" text="Install SDK"/>
+            <Label class="path" text="{binding availableNote}"/>
+          </Stack>
+          <Button class="tool-button refresh-button" command="{binding refreshAvailable}" content="Refresh"/>
+          <Button class="tool-button back-button" command="{binding closeInstallSdk}" content="Back"/>
         </Stack>
-        <ScrollView class="box available-box">
+        <ScrollView class="box">
           <ItemsControl class="rows" items_source="{binding available}">
             <ItemTemplate>
               <Stack class="row" direction="horizontal">

@@ -68,6 +68,8 @@ LauncherApp::LauncherApp(const engine::EngineServices& services)
     , installer_(install_downloader_, extractor_) {
     view_model_->showProjects.bind_to<LauncherApp, &LauncherApp::show_projects>(*this);
     view_model_->showSdks.bind_to<LauncherApp, &LauncherApp::show_sdks>(*this);
+    view_model_->installSdk.bind_to<LauncherApp, &LauncherApp::show_install_sdk>(*this);
+    view_model_->closeInstallSdk.bind_to<LauncherApp, &LauncherApp::show_sdks>(*this);
     view_model_->addProject.bind_to<LauncherApp, &LauncherApp::add_project>(*this);
     view_model_->locateSdk.bind_to<LauncherApp, &LauncherApp::locate_sdk>(*this);
     view_model_->refreshAvailable.bind_to<LauncherApp, &LauncherApp::refresh_available>(*this);
@@ -139,13 +141,19 @@ void LauncherApp::show_sdks() {
     show_page(Page::Sdks);
 }
 
+void LauncherApp::show_install_sdk() {
+    show_page(Page::InstallSdk);
+}
+
 void LauncherApp::show_page(Page page) {
     page_ = page;
     const auto display = [&](Page shown) { return std::string(page == shown ? "block" : "none"); };
-    view_model_->projectsTab = page != Page::Sdks;
-    view_model_->sdksTab = page == Page::Sdks;
+    const bool sdk_page = page == Page::Sdks || page == Page::InstallSdk;
+    view_model_->projectsTab = !sdk_page;
+    view_model_->sdksTab = sdk_page;
     view_model_->projectsDisplay = display(Page::Projects);
     view_model_->sdksDisplay = display(Page::Sdks);
+    view_model_->availableDisplay = display(Page::InstallSdk);
     view_model_->newProjectDisplay = display(Page::NewProject);
     view_model_->sdkPickerOpen = false;
 }

@@ -42,7 +42,8 @@ public:
 
 // The system `tar` (Windows 10 and later and macOS unpack a .zip with it, every system a .tar.gz), started through
 // IProcessLauncher. The archive is listed first and refused if any entry would leave the destination; the unpacked tree
-// is checked again for links that point out of it. The archive is never executed.
+// is checked again for links that point out of it. The archive is never executed. A link that cannot be created (a
+// symbolic link needs a privilege on Windows) is skipped, but only when it is the one thing tar failed on.
 class TarExtractor final : public IExtractor {
 public:
     explicit TarExtractor(engine::IProcessLauncher& processes);
@@ -57,6 +58,8 @@ private:
         Idle,
         Listing,
         Unpacking,
+        // After an unpacking that failed only on some entries: which of them are links.
+        Links,
     };
 
     std::optional<ExtractResult> fail(std::string error);
@@ -66,6 +69,9 @@ private:
     Step step_ = Step::Idle;
     ExtractRequest request_;
     std::vector<std::string> output_;
+    // The entries tar could not create, and what it said about them.
+    std::vector<std::string> failed_entries_;
+    std::string unpack_reason_;
 };
 
 // Why the archive entries (the names `tar -tf` lists) cannot be unpacked, or empty when they can: an absolute path, a
