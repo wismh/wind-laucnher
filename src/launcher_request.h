@@ -17,6 +17,7 @@ struct LauncherRequest {
         CreateProject,
         Open,
         Remove,
+        ChangeProjectSdk,
         ShowSdk,
         ForgetSdk,
         DeleteSdk,
@@ -27,9 +28,9 @@ struct LauncherRequest {
     };
 
     Kind kind = Kind::None;
-    // The project row (Open, Remove), SDK row (ShowSdk, ForgetSdk, DeleteSdk), or Available row (InstallSdk).
+    // The project row (Open, Remove, ChangeProjectSdk), SDK row (ShowSdk, ForgetSdk, DeleteSdk), or Available row (InstallSdk).
     std::size_t index = 0;
-    // InstallVersion: the version a project needs, by exact text.
+    // InstallVersion: the version a project needs, by exact text. ChangeProjectSdk: the version to write into it.
     std::string version;
 };
 

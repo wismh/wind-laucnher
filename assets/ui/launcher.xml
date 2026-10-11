@@ -18,15 +18,30 @@
           <ItemsControl class="rows" items_source="{binding projects}">
             <ItemTemplate>
               <Stack class="row" direction="horizontal">
-                <Stack class="row-text" direction="vertical">
+                <Stack class="row-text" direction="vertical" command="{binding open}">
                   <Label class="name" text="{binding name}"/>
                   <Label class="path" text="{binding path}"/>
                 </Stack>
-                <Label class="engine" text="{binding engineText}" var-tone="{binding tone}"/>
-                <Button class="open-button slot" command="{binding open}" content="Open" var-display="{binding openDisplay}"/>
-                <Button class="install-button slot" command="{binding install}" content="{binding installLabel}"
-                        var-display="{binding installDisplay}"/>
-                <Button class="small-button" command="{binding remove}" content="Remove"/>
+                <Button class="sdk-button" command="{binding toggleSdkMenu}" content="{binding engineText}"
+                        var-tone="{binding tone}">
+                  <Popup class="menu" open="{binding sdkMenuOpen}" placement="bottom-end">
+                    <Button class="menu-item install-item" command="{binding install}" content="{binding installLabel}"
+                            var-display="{binding installDisplay}"/>
+                    <ItemsControl class="sdk-choices" items_source="{binding sdkChoices}">
+                      <ItemTemplate>
+                        <Button class="menu-item" command="{binding pick}" checked="{binding selected}"
+                                content="{binding text}"/>
+                      </ItemTemplate>
+                    </ItemsControl>
+                  </Popup>
+                </Button>
+                <Button class="more-button" command="{binding toggleMenu}" content="···">
+                  <Popup class="menu" open="{binding menuOpen}" placement="bottom-end">
+                    <Button class="menu-item" command="{binding open}" content="Open"/>
+                    <Button class="menu-item" command="{binding changeSdk}" content="Change SDK…"/>
+                    <Button class="menu-item" command="{binding remove}" content="Remove from list"/>
+                  </Popup>
+                </Button>
               </Stack>
             </ItemTemplate>
           </ItemsControl>
@@ -90,7 +105,7 @@
                 </Stack>
                 <Button class="install-button slot" command="{binding install}" content="Install"
                         var-display="{binding installDisplay}"/>
-                <Button class="small-button slot" command="{binding cancel}" content="Cancel"
+                <Button class="tool-button cancel-button slot" command="{binding cancel}" content="Cancel"
                         var-display="{binding cancelDisplay}"/>
               </Stack>
             </ItemTemplate>

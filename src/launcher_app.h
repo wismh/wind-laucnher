@@ -88,6 +88,8 @@ private:
     // In `sdk`, or the one sdk_for picks for the project's version.
     void open_project(std::size_t index, const SdkEntry* sdk = nullptr);
     void delete_sdk(std::size_t index);
+    // Writes `version` as the engine of project `index` and reads the projects again.
+    void change_project_sdk(std::size_t index, const std::string& version);
     // The Available list.
     void start_install(const SdkRelease& release);
     void finish_install(const InstallOutcome& outcome);

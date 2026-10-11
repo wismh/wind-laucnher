@@ -277,6 +277,9 @@ void LauncherApp::act(const LauncherRequest& request) {
                 show_status("Removed from the list. The project's files are untouched.");
             }
             break;
+        case LauncherRequest::Kind::ChangeProjectSdk:
+            change_project_sdk(request.index, request.version);
+            break;
         case LauncherRequest::Kind::ShowSdk:
             if (request.index < sdks_.size()) {
                 show_folder(sdks_[request.index].root);
@@ -392,6 +395,18 @@ void LauncherApp::open_project(std::size_t index, const SdkEntry* in_sdk) {
     show_status("Opened " + entry.project->name + " in editor " + version + ".");
 }
 
+void LauncherApp::change_project_sdk(std::size_t index, const std::string& version) {
+    if (index >= projects_.size() || !projects_[index].project || projects_[index].project->engine == version) {
+        return;
+    }
+    const ProjectEntry entry = projects_[index];
+    const std::expected<void, std::string> written = set_project_engine(entry.directory, version);
+    engine::log::info("Launcher: SDK of " + path_text(entry.directory) + " from " + entry.project->engine + " to " +
+            version + ": " + (written ? std::string("done") : written.error()));
+    refresh();
+    show_status(written ? entry.project->name + " now uses SDK " + version + "." : written.error());
+}
+
 void LauncherApp::delete_sdk(std::size_t index) {
     // Only an SDK found under the install directory: a located one is the user's own build, which Forget leaves be.
     if (index >= sdks_.size() || sdks_[index].located) {
@@ -503,6 +518,17 @@ void LauncherApp::rebuild_project_rows() {
         const SdkEntry* sdk = entry.project ? sdk_for(sdks_, entry.project->engine) : nullptr;
         auto row = std::make_shared<ProjectRowViewModel>(*this, i, sdk != nullptr);
         row->path = path_text(entry.directory);
+        if (entry.project) {
+            std::vector<std::shared_ptr<ProjectSdkChoiceViewModel>> choices;
+            for (const SdkEntry& installed : sdks_) {
+                const std::string& version = installed.manifest.version;
+                auto choice = std::make_shared<ProjectSdkChoiceViewModel>(*this, i, version);
+                choice->text = installed.located ? version + "  (located)" : version;
+                choice->selected = version == entry.project->engine;
+                choices.push_back(std::move(choice));
+            }
+            row->set_sdk_choices(std::move(choices));
+        }
         if (entry.project && sdk == nullptr) {
             // The SDK is not here, but GitHub has it: Install in the place of Open.
             if (const AvailableSdk* offered = find_available(entry.project->engine); offered != nullptr && !offered->installed) {
