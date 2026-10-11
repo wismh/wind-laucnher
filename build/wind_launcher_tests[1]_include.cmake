@@ -1,0 +1,1 @@
+include("/home/user/wind-laucnher/build/wind_launcher_tests[1]_include-${CTEST_CONFIGURATION_TYPE}.cmake")
