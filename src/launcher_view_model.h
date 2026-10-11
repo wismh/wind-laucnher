@@ -1,5 +1,6 @@
 #pragma once
 
+#include "available_sdk_row_view_model.h"
 #include "method_command.h"
 #include "project_row_view_model.h"
 #include "sdk_option_view_model.h"
@@ -28,6 +29,10 @@ public:
 
     engine::ui::BindableList<std::shared_ptr<ProjectRowViewModel>> projects;
     engine::ui::BindableList<std::shared_ptr<SdkRowViewModel>> sdks;
+    // The SDKs GitHub offers for this platform, newest first, and a line about the list: "Checking GitHub…", "offline:
+    // showing the list from 2026-10-10", or empty.
+    engine::ui::BindableList<std::shared_ptr<AvailableSdkRowViewModel>> available;
+    engine::ui::Bindable<std::string> availableNote;
     // Where SDKs are installed, or why there is no such directory.
     engine::ui::Bindable<std::string> sdkFolderText;
     engine::ui::Bindable<std::string> statusText;
@@ -49,6 +54,7 @@ public:
     MethodCommand addProject;
     MethodCommand newProject;
     MethodCommand locateSdk;
+    MethodCommand refreshAvailable;
     MethodCommand showSdkFolder;
     MethodCommand browseLocation;
     MethodCommand toggleSdkPicker;

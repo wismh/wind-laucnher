@@ -2,6 +2,11 @@
 
 The launcher of the [Wind engine](https://github.com/wismh/wind-engine): it lists your Wind projects and the editor SDKs installed on your machine, makes a new project from the SDK's template, and opens a project in the editor of the engine version it names. It is itself a Wind game project (`wind_project.toml`, `find_package(Wind)`, `engine_add_game`), built against a released SDK.
 
+## What it does
+
+- **Projects**: lists your Wind projects, makes a new one from an SDK's template, and opens a project in the editor of the engine version its `wind_project.toml` names.
+- **SDKs**: lists the editor SDKs installed on this machine (**Installed**) and the ones the engine publishes on GitHub for this system (**Available**). **Install** downloads the SDK, checks its SHA-256, unpacks it, and adds it to **Installed**; a project that needs an SDK you do not have shows **Install `<version>`** instead of Open. **Delete** in the row's `···` menu removes an installed SDK.
+
 ## Download
 
 These links always point to the newest launcher (the `latest` release is rebuilt on every release; the version-less names stay the same):
@@ -22,6 +27,16 @@ The launcher is not code-signed or notarized yet:
 
 - **macOS**: Gatekeeper says the app cannot be opened because the developer cannot be verified. Right-click `wind_launcher` and choose **Open**, then **Open** again (or `xattr -d com.apple.quarantine wind_launcher` in the unpacked folder).
 - **Windows**: SmartScreen shows "Windows protected your PC". Choose **More info**, then **Run anyway**.
+
+## Installing SDKs
+
+The Available list is the list of releases of [wismh/wind-engine](https://github.com/wismh/wind-engine/releases) that have an SDK archive for this system (`wind-sdk-<version>-<os>-<arch>` with its `.sha256`), newest first, with the stage (alpha, beta, release), the date, and the size. It is kept in the launcher's data directory (`available_sdks.txt`), so it shows at once and when you are offline ("offline: showing the list from 2026-10-10"). **Refresh** asks GitHub again.
+
+An install downloads the checksum file and the archive into a temporary directory inside the install directory, checks the SHA-256, unpacks it, checks that it holds exactly `wind-sdk-<version>-<os>-<arch>/` with an `sdk.toml` of that version and `bin/wind_editor`, and renames it to `sdk-<version>`. Any failure (no network, a damaged download, a bad archive) removes the temporary directory and says why on the row; **Cancel** does the same. One install runs at a time, and the window stays responsive. An install that was cut short (the launcher closed, a power loss) is cleaned up the next time the launcher starts. The archive is never run, and an entry that would leave its folder (`..`, an absolute path, a link out) is refused.
+
+It needs `curl` and `tar` on the `PATH`. They ship with Windows 10 (1803 and later), macOS, and every common Linux; the launcher says so when one is missing. The launcher has no HTTP client of its own: the engine's runs on Windows, Android, and the web only.
+
+GitHub allows 60 unauthenticated API requests an hour. Over that the launcher shows the saved list and a note. Set `GITHUB_TOKEN` or `GH_TOKEN` (any token, no scopes needed) in the environment the launcher starts in to raise the limit; it is sent only to `api.github.com`.
 
 ## Where things are stored
 
@@ -46,6 +61,17 @@ build/bin/Release/wind_launcher
 ```
 
 On Windows use `-G "Visual Studio 18 2026"` instead of Ninja. On Linux the SDK needs the same development packages as the engine (X11, Wayland, ALSA, Mesa; the list is in `.github/actions/build/action.yml`). The tests need no network and no display other than the virtual one.
+
+## Tests
+
+`wind_launcher_tests` needs no network and no display: the release parsing against recorded GitHub answers (`tests/fixtures/`), the version order, the ETag cache, SHA-256 against the standard vectors, the installer against a fake downloader and extractor (every failure leaves the SDK list as it was), and real archives made with the system `tar` and unpacked by the real extraction path. `tools/e2e_install.py` is the check with a real network: it drives a Development build of the launcher with `wind-cli`, installs a real SDK from GitHub through the window, checks it on disk, and deletes it again (`ci.yml` runs it on Linux; the screenshots of one run are in `docs/e2e/`).
+
+```sh
+cmake -S . -B build-dev -G "Ninja Multi-Config" -DWIND_EXPORT=ON -DCMAKE_PREFIX_PATH=/path/to/wind-sdk \
+  -DWind_DIR=/path/to/wind-sdk/cmake "-DCMAKE_CONFIGURATION_TYPES=DebugGame;Release"
+cmake --build build-dev --config DebugGame --target wind_launcher
+xvfb-run -a python3 tools/e2e_install.py --launcher build-dev/bin/DebugGame/wind_launcher --sdk-bin /path/to/wind-sdk/bin --out e2e-out
+```
 
 ## Releases
 

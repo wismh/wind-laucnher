@@ -13,6 +13,7 @@
 #include <engine/ui/canvas.h>
 
 #include <algorithm>
+#include <cstdint>
 #include <expected>
 #include <string_view>
 #include <system_error>
@@ -24,6 +25,7 @@ namespace {
 constexpr char kOrganization[] = "Wind";
 constexpr char kApplication[] = "Launcher";
 constexpr char kStateFile[] = "launcher.txt";
+constexpr char kReleaseCacheFile[] = "available_sdks.txt";
 constexpr char kMissingTone[] = "#ff6b68";
 
 std::string sdk_detail(const SdkEntry& sdk) {
@@ -59,11 +61,16 @@ LauncherApp::LauncherApp(const engine::EngineServices& services)
     : engine::GameBase(services.worlds)
     , windows_(&services.windows)
     , processes_(&services.processes)
-    , view_model_(std::make_shared<LauncherViewModel>()) {
+    , view_model_(std::make_shared<LauncherViewModel>())
+    , feed_downloader_(services.processes)
+    , install_downloader_(services.processes)
+    , extractor_(services.processes)
+    , installer_(install_downloader_, extractor_) {
     view_model_->showProjects.bind_to<LauncherApp, &LauncherApp::show_projects>(*this);
     view_model_->showSdks.bind_to<LauncherApp, &LauncherApp::show_sdks>(*this);
     view_model_->addProject.bind_to<LauncherApp, &LauncherApp::add_project>(*this);
     view_model_->locateSdk.bind_to<LauncherApp, &LauncherApp::locate_sdk>(*this);
+    view_model_->refreshAvailable.bind_to<LauncherApp, &LauncherApp::refresh_available>(*this);
     view_model_->showSdkFolder.bind_to<LauncherApp, &LauncherApp::show_sdk_folder>(*this);
     view_model_->newProject.bind_to<LauncherApp, &LauncherApp::new_project>(*this);
     view_model_->browseLocation.bind_to<LauncherApp, &LauncherApp::browse_location>(*this);
@@ -101,9 +108,24 @@ void LauncherApp::on_start() {
         view_model_->sdkFolderText = std::string("No install directory: locate an SDK by its sdk.toml.");
     } else {
         remove_deleted_sdks(install_dir_);
+        remove_interrupted_installs(install_dir_);
         view_model_->sdkFolderText = "Installed in " + path_text(install_dir_);
     }
+
+    ReleaseFeedOptions feed_options;
+    feed_options.cache_file = data_dir_.empty() ? std::filesystem::path{} : data_dir_ / kReleaseCacheFile;
+    feed_options.work_directory = (data_dir_.empty() ? std::filesystem::temp_directory_path() / "wind-launcher"
+                                                     : data_dir_) / "downloads";
+    for (const char* variable : {"GITHUB_TOKEN", "GH_TOKEN"}) {
+        if (feed_options.token.empty()) {
+            feed_options.token = environment_path(variable).string();
+        }
+    }
+    feed_ = std::make_unique<ReleaseFeed>(feed_downloader_, std::move(feed_options));
+    feed_->load_cache();
     refresh();
+    feed_->refresh();
+    update_available_note();
     if (projects_.empty()) {
         show_status("Make a project with New project, or add one you have with Add existing.");
     }
@@ -184,15 +206,31 @@ void LauncherApp::show_sdk_folder() {
     request(LauncherRequest{.kind = LauncherRequest::Kind::ShowSdkFolder});
 }
 
+void LauncherApp::refresh_available() {
+    request(LauncherRequest{.kind = LauncherRequest::Kind::RefreshAvailable});
+}
+
 void LauncherApp::request(LauncherRequest request) {
-    request_ = request;
+    request_ = std::move(request);
 }
 
 void LauncherApp::frame() {
     if (const std::optional<engine::FileDialogResult> answer = dialog_.take()) {
         take_dialog_answer(*answer);
     }
+    feed_->poll();
+    installer_.poll();
+    if (const std::optional<InstallOutcome> outcome = installer_.take_outcome()) {
+        finish_install(*outcome);
+    }
+    if (feed_->revision() != feed_revision_) {
+        feed_revision_ = feed_->revision();
+        rebuild_available();
+        rebuild_project_rows();
+        update_available_note();
+    }
     act(std::exchange(request_, LauncherRequest{}));
+    show_install_progress();
     if (page_ == Page::NewProject) {
         check_new_project();
     }
@@ -245,6 +283,26 @@ void LauncherApp::act(const LauncherRequest& request) {
             break;
         case LauncherRequest::Kind::DeleteSdk:
             delete_sdk(request.index);
+            break;
+        case LauncherRequest::Kind::InstallSdk:
+            if (request.index < available_.size()) {
+                start_install(available_[request.index].release);
+            }
+            break;
+        case LauncherRequest::Kind::InstallVersion:
+            if (const AvailableSdk* sdk = find_available(request.version)) {
+                start_install(sdk->release);
+            }
+            break;
+        case LauncherRequest::Kind::CancelInstall:
+            installer_.cancel();
+            if (const std::optional<InstallOutcome> outcome = installer_.take_outcome()) {
+                finish_install(*outcome);
+            }
+            break;
+        case LauncherRequest::Kind::RefreshAvailable:
+            feed_->refresh();
+            update_available_note();
             break;
     }
 }
@@ -430,23 +488,22 @@ void LauncherApp::refresh_sdk_options() {
     view_model_->sdkOptions.set(std::move(options));
 }
 
-void LauncherApp::refresh() {
-    std::vector<std::string> problems;
-    sdks_ = find_sdks(install_dir_, state_.sdks, problems);
-    for (const std::string& problem : problems) {
-        engine::log::warn("Launcher: " + problem);
-    }
-    projects_.clear();
-    for (const std::filesystem::path& directory : state_.projects) {
-        projects_.push_back(read_project_entry(directory));
-    }
-
+void LauncherApp::rebuild_project_rows() {
     std::vector<std::shared_ptr<ProjectRowViewModel>> project_rows;
     for (std::size_t i = 0; i < projects_.size(); ++i) {
         const ProjectEntry& entry = projects_[i];
         const SdkEntry* sdk = entry.project ? sdk_for(sdks_, entry.project->engine) : nullptr;
         auto row = std::make_shared<ProjectRowViewModel>(*this, i, sdk != nullptr);
         row->path = path_text(entry.directory);
+        if (entry.project && sdk == nullptr) {
+            // The SDK is not here, but GitHub has it: Install in the place of Open.
+            if (const AvailableSdk* offered = find_available(entry.project->engine); offered != nullptr && !offered->installed) {
+                const bool installing_it = installer_.running() && installer_.progress().version == offered->release.version;
+                row->offer_install(offered->release.version,
+                        installing_it ? std::string("Installing…") : "Install " + offered->release.version,
+                        !installer_.running());
+            }
+        }
         if (entry.project) {
             row->name = entry.project->name;
             row->engineText = (sdk != nullptr ? "SDK " : "Needs SDK ") + entry.project->engine;
@@ -459,6 +516,21 @@ void LauncherApp::refresh() {
         project_rows.push_back(std::move(row));
     }
     view_model_->projects.set(std::move(project_rows));
+}
+
+void LauncherApp::refresh() {
+    std::vector<std::string> problems;
+    sdks_ = find_sdks(install_dir_, state_.sdks, problems);
+    for (const std::string& problem : problems) {
+        engine::log::warn("Launcher: " + problem);
+    }
+    projects_.clear();
+    for (const std::filesystem::path& directory : state_.projects) {
+        projects_.push_back(read_project_entry(directory));
+    }
+
+    rebuild_available();
+    rebuild_project_rows();
 
     std::vector<std::shared_ptr<SdkRowViewModel>> sdk_rows;
     for (std::size_t i = 0; i < sdks_.size(); ++i) {
@@ -473,6 +545,134 @@ void LauncherApp::refresh() {
 
     if (!data_dir_.empty() && !save_launcher_state(data_dir_ / kStateFile, state_)) {
         engine::log::warn("Launcher: could not save " + path_text(data_dir_ / kStateFile));
+    }
+}
+
+const AvailableSdk* LauncherApp::find_available(std::string_view version) const {
+    const auto found = std::ranges::find_if(
+            available_, [&](const AvailableSdk& sdk) { return sdk.release.version == version; });
+    return found == available_.end() ? nullptr : &*found;
+}
+
+void LauncherApp::start_install(const SdkRelease& release) {
+    // `release` points into available_, which rebuild_available() replaces below.
+    const SdkRelease chosen = release;
+    failed_version_.clear();
+    failure_.clear();
+    const std::expected<void, std::string> started = installer_.start(chosen, install_dir_);
+    if (!started) {
+        show_status(started.error());
+        return;
+    }
+    engine::log::info("Launcher: installing SDK " + chosen.version + " from " + chosen.archive_url);
+    show_status("Installing SDK " + chosen.version + "…");
+    rebuild_available();
+    rebuild_project_rows();
+}
+
+void LauncherApp::finish_install(const InstallOutcome& outcome) {
+    engine::log::info("Launcher: install of SDK " + outcome.version + ": " + outcome.message);
+    failed_version_.clear();
+    failure_.clear();
+    if (!outcome.installed && !outcome.cancelled) {
+        failed_version_ = outcome.version;
+        failure_ = outcome.message;
+    }
+    if (outcome.installed) {
+        // The new SDK is in the Installed list at once, and a project that waited for it can be opened.
+        refresh();
+    } else {
+        rebuild_available();
+        rebuild_project_rows();
+    }
+    show_status(outcome.message);
+}
+
+void LauncherApp::rebuild_available() {
+    available_ = build_available(feed_->releases(), sdks_);
+    available_rows_.clear();
+    const bool busy = installer_.running();
+    for (std::size_t i = 0; i < available_.size(); ++i) {
+        const AvailableSdk& sdk = available_[i];
+        const bool installing = busy && installer_.progress().version == sdk.release.version;
+        auto row = std::make_shared<AvailableSdkRowViewModel>(*this, i, !busy && !sdk.installed);
+        row->version = sdk.release.version;
+        std::string detail(stage_name(sdk.release.parsed));
+        if (!sdk.release.date.empty()) {
+            detail += ", " + sdk.release.date;
+        }
+        if (sdk.release.size > 0) {
+            detail += ", " + format_size(sdk.release.size);
+        }
+        if (sdk.newest) {
+            detail += ", newest";
+        }
+        row->detail = std::move(detail);
+        if (sdk.installed) {
+            row->state = std::string("Installed");
+            row->installDisplay = std::string("none");
+        } else if (installing) {
+            row->installDisplay = std::string("none");
+            row->cancelDisplay = std::string("block");
+        } else if (failed_version_ == sdk.release.version) {
+            row->state = failure_;
+            row->tone = std::string(kMissingTone);
+        }
+        available_rows_.push_back(std::move(row));
+    }
+    view_model_->available.set(available_rows_);
+    show_install_progress();
+}
+
+namespace {
+
+std::string percent(std::uint64_t done, std::uint64_t total) {
+    return total == 0 ? std::string{} : " (" + std::to_string(std::min<std::uint64_t>(100, done * 100 / total)) + "%)";
+}
+
+}
+
+void LauncherApp::show_install_progress() {
+    if (!installer_.running()) {
+        return;
+    }
+    const InstallProgress& progress = installer_.progress();
+    std::string text;
+    switch (progress.phase) {
+        case InstallPhase::Idle:
+            return;
+        case InstallPhase::Checksum:
+            text = "Getting the checksum…";
+            break;
+        case InstallPhase::Download:
+            text = "Downloading " + format_size(progress.done) +
+                   (progress.total > 0 ? " of " + format_size(progress.total) : std::string{}) +
+                   percent(progress.done, progress.total);
+            break;
+        case InstallPhase::Verify:
+            text = "Checking the download" + percent(progress.done, progress.total);
+            break;
+        case InstallPhase::Unpack:
+            text = "Unpacking…";
+            break;
+    }
+    for (std::size_t i = 0; i < available_.size() && i < available_rows_.size(); ++i) {
+        if (available_[i].release.version == progress.version) {
+            available_rows_[i]->state = text;
+        }
+    }
+}
+
+void LauncherApp::update_available_note() {
+    if (feed_->loading()) {
+        view_model_->availableNote = std::string("Checking GitHub…");
+    } else if (!feed_->note().empty()) {
+        view_model_->availableNote = feed_->note();
+    } else if (available_.empty()) {
+        const Platform platform = current_platform();
+        view_model_->availableNote = "No SDK for " + platform.os + "-" + platform.arch + " is published yet.";
+    } else {
+        view_model_->availableNote = std::string{};
     }
 }
 

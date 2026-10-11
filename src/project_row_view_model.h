@@ -24,6 +24,12 @@ public:
     void open_project();
     void remove_project();
     [[nodiscard]] bool can_open_project() const;
+    void install_sdk();
+    [[nodiscard]] bool can_install_sdk() const;
+
+    // Offers "Install <version>" in the place of Open: the project needs an SDK that is not installed and GitHub has it.
+    // `enabled` is false while an install runs, and `label` then says "Installing…" for this version.
+    void offer_install(std::string version, std::string label, bool enabled);
 
     engine::ui::Bindable<std::string> name;
     engine::ui::Bindable<std::string> path;
@@ -31,13 +37,20 @@ public:
     engine::ui::Bindable<std::string> engineText;
     // engineText's color through `var-tone`. Empty: the stylesheet's default.
     engine::ui::Bindable<std::string> tone;
+    // "block" or "none" through `var-display`: Open, or Install in its place.
+    engine::ui::Bindable<std::string> openDisplay{std::string("block")};
+    engine::ui::Bindable<std::string> installDisplay{std::string("none")};
+    engine::ui::Bindable<std::string> installLabel;
     MethodCommand open;
     MethodCommand remove;
+    MethodCommand install;
 
 private:
     LauncherApp* app_;
     std::size_t index_;
     bool openable_;
+    std::string install_version_;
+    bool install_enabled_ = false;
 };
 
 }

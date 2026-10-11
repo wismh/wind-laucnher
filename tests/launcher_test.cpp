@@ -4,6 +4,7 @@
 #include "project_entry.h"
 #include "project_template.h"
 #include "sdk_catalog.h"
+#include "test_support.h"
 
 #include <filesystem>
 #include <fstream>
@@ -13,45 +14,7 @@
 #include <string_view>
 #include <vector>
 
-namespace {
-
-// A fresh directory per test under the temp directory, removed with the object. ctest runs tests in parallel. Named
-// by a hash of the test's name, not the name: a new project's path must stay short (kMaxProjectPath).
-class TempDir {
-public:
-    TempDir()
-        : path_(std::filesystem::temp_directory_path() / "wlt" /
-                  std::to_string(std::hash<std::string>{}(
-                                         ::testing::UnitTest::GetInstance()->current_test_info()->name()) %
-                                 1000000)) {
-        std::filesystem::remove_all(path_);
-        std::filesystem::create_directories(path_);
-    }
-    ~TempDir() {
-        std::error_code error;
-        std::filesystem::remove_all(path_, error);
-    }
-
-    [[nodiscard]] const std::filesystem::path& path() const {
-        return path_;
-    }
-
-    void write(const std::filesystem::path& relative, std::string_view text) const {
-        std::filesystem::create_directories((path_ / relative).parent_path());
-        std::ofstream(path_ / relative, std::ios::binary) << text;
-    }
-
-    void sdk(const std::filesystem::path& relative, std::string_view version, bool dirty) const {
-        write(relative / "sdk.toml", "version = \"" + std::string(version) + "\"\ncommit = \"0123456789abcdef\"\n" +
-                                             "dirty = " + (dirty ? "true" : "false") +
-                                             "\nconfig = \"Release\"\nbuild_id = \"aa\"\n");
-    }
-
-private:
-    std::filesystem::path path_;
-};
-
-}
+using launcher_test::TempDir;
 
 TEST(LauncherState, ParsesProjectsAndSdksAndSkipsTheRest) {
     const launcher::LauncherState state = launcher::parse_launcher_state(

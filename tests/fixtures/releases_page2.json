@@ -1,0 +1,96 @@
+[
+ {
+  "url": "https://api.github.com/repos/wismh/wind-engine/releases/49272",
+  "tag_name": "v0.1.0a",
+  "name": "Wind 0.1.0a",
+  "draft": false,
+  "prerelease": true,
+  "created_at": "2026-10-09T08:00:00Z",
+  "published_at": "2026-10-09T08:30:00Z",
+  "assets": [
+   {
+    "name": "wind-sdk-0.1.0a-windows-x86_64.zip",
+    "size": 183084041,
+    "browser_download_url": "https://github.com/wismh/wind-engine/releases/download/v0.1.0a/wind-sdk-0.1.0a-windows-x86_64.zip",
+    "content_type": "application/octet-stream"
+   },
+   {
+    "name": "wind-sdk-0.1.0a-windows-x86_64.zip.sha256",
+    "size": 102,
+    "browser_download_url": "https://github.com/wismh/wind-engine/releases/download/v0.1.0a/wind-sdk-0.1.0a-windows-x86_64.zip.sha256",
+    "content_type": "text/plain"
+   },
+   {
+    "name": "wind-sdk-0.1.0a-linux-x86_64.tar.gz",
+    "size": 136883658,
+    "browser_download_url": "https://github.com/wismh/wind-engine/releases/download/v0.1.0a/wind-sdk-0.1.0a-linux-x86_64.tar.gz",
+    "content_type": "application/octet-stream"
+   },
+   {
+    "name": "wind-sdk-0.1.0a-linux-x86_64.tar.gz.sha256",
+    "size": 102,
+    "browser_download_url": "https://github.com/wismh/wind-engine/releases/download/v0.1.0a/wind-sdk-0.1.0a-linux-x86_64.tar.gz.sha256",
+    "content_type": "text/plain"
+   },
+   {
+    "name": "wind-sdk-0.1.0a-macos-arm64.tar.gz",
+    "size": 67276992,
+    "browser_download_url": "https://github.com/wismh/wind-engine/releases/download/v0.1.0a/wind-sdk-0.1.0a-macos-arm64.tar.gz",
+    "content_type": "application/octet-stream"
+   },
+   {
+    "name": "wind-sdk-0.1.0a-macos-arm64.tar.gz.sha256",
+    "size": 102,
+    "browser_download_url": "https://github.com/wismh/wind-engine/releases/download/v0.1.0a/wind-sdk-0.1.0a-macos-arm64.tar.gz.sha256",
+    "content_type": "text/plain"
+   }
+  ]
+ },
+ {
+  "url": "https://api.github.com/repos/wismh/wind-engine/releases/86224",
+  "tag_name": "v0.0.1a",
+  "name": "Wind 0.0.1a",
+  "draft": false,
+  "prerelease": true,
+  "created_at": "2026-09-30T08:00:00Z",
+  "published_at": "2026-09-30T08:30:00Z",
+  "assets": [
+   {
+    "name": "wind-sdk-0.0.1a-windows-x86_64.zip",
+    "size": 183084041,
+    "browser_download_url": "https://github.com/wismh/wind-engine/releases/download/v0.0.1a/wind-sdk-0.0.1a-windows-x86_64.zip",
+    "content_type": "application/octet-stream"
+   },
+   {
+    "name": "wind-sdk-0.0.1a-windows-x86_64.zip.sha256",
+    "size": 102,
+    "browser_download_url": "https://github.com/wismh/wind-engine/releases/download/v0.0.1a/wind-sdk-0.0.1a-windows-x86_64.zip.sha256",
+    "content_type": "text/plain"
+   },
+   {
+    "name": "wind-sdk-0.0.1a-linux-x86_64.tar.gz",
+    "size": 136883658,
+    "browser_download_url": "https://github.com/wismh/wind-engine/releases/download/v0.0.1a/wind-sdk-0.0.1a-linux-x86_64.tar.gz",
+    "content_type": "application/octet-stream"
+   },
+   {
+    "name": "wind-sdk-0.0.1a-linux-x86_64.tar.gz.sha256",
+    "size": 102,
+    "browser_download_url": "https://github.com/wismh/wind-engine/releases/download/v0.0.1a/wind-sdk-0.0.1a-linux-x86_64.tar.gz.sha256",
+    "content_type": "text/plain"
+   },
+   {
+    "name": "wind-sdk-0.0.1a-macos-arm64.tar.gz",
+    "size": 67276992,
+    "browser_download_url": "https://github.com/wismh/wind-engine/releases/download/v0.0.1a/wind-sdk-0.0.1a-macos-arm64.tar.gz",
+    "content_type": "application/octet-stream"
+   },
+   {
+    "name": "wind-sdk-0.0.1a-macos-arm64.tar.gz.sha256",
+    "size": 102,
+    "browser_download_url": "https://github.com/wismh/wind-engine/releases/download/v0.0.1a/wind-sdk-0.0.1a-macos-arm64.tar.gz.sha256",
+    "content_type": "text/plain"
+   }
+  ]
+ }
+]

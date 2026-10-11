@@ -151,6 +151,68 @@ ScrollView.box {
   scrollbar-color: #4e5157 #2b2d30;
 }
 
+/* The SDKs page: the header (64 px), "Installed" (32), its list, "Available" (32), its list. The lists share what is
+   left: calc(30% - 40px) and calc(70% - 88px) add up to calc(100% - 128px). */
+ScrollView.installed-box {
+  height: calc(30% - 40px);
+}
+
+ScrollView.available-box {
+  height: calc(70% - 88px);
+}
+
+.section-header {
+  width: 100%;
+  height: 32;
+  gap: 12;
+  align-items: center;
+}
+
+.section-title {
+  width: 90;
+  font-size: 15;
+  color: #dfe1e5;
+}
+
+/* Beside the note: the title 90, Refresh 84, two gaps 24. */
+.section-note {
+  width: calc(100% - 198px);
+  font-size: 12;
+  color: #8c9096;
+}
+
+/* An available row: padding 18, version 70, Install 120 (Cancel is 84), three gaps 30 = 238 px beside the text. */
+.available-text {
+  width: calc(100% - 238px);
+  gap: 2;
+}
+
+/* --tone is red when the last install failed (LauncherApp). */
+.state {
+  font-size: 12;
+  color: var(--tone, #8c9096);
+}
+
+/* A button that is shown or hidden: LauncherApp writes "block" or "none" through var-display. */
+.slot {
+  display: var(--display, block);
+}
+
+.install-button {
+  width: 120;
+  color: #ffffff;
+  background: #2f7d36;
+}
+
+.install-button:hover {
+  background: #3a9142;
+}
+
+.install-button:disabled {
+  color: #8a8f96;
+  background: #34413a;
+}
+
 .status-bar {
   width: 100%;
   height: 32;
@@ -182,9 +244,9 @@ ItemsControl.rows {
   background: #ffffff0d;
 }
 
-/* A project row: padding 18, engine 130, Open 84, Remove 84, three gaps 30 = 346 px beside the text. */
+/* A project row: padding 18, engine 130, Open 84 or Install 120, Remove 84, three gaps 30 = 382 px beside the text. */
 .row-text {
-  width: calc(100% - 346px);
+  width: calc(100% - 382px);
   gap: 2;
 }
 

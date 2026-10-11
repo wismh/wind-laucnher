@@ -1,11 +1,17 @@
 #pragma once
 
+#include "available_sdk_row_view_model.h"
+#include "downloader.h"
+#include "extractor.h"
 #include "launcher_request.h"
 #include "launcher_state.h"
 #include "launcher_view_model.h"
 #include "project_entry.h"
 #include "project_template.h"
+#include "release_feed.h"
 #include "sdk_catalog.h"
+#include "sdk_installer.h"
+#include "sdk_release.h"
 
 #include <engine/core/engine_services.h>
 #include <engine/core/file_dialog.h>
@@ -25,7 +31,10 @@ namespace launcher {
 // SDK version.
 //
 // Remembers its lists in `user_data_directory("Wind", "Launcher")/launcher.txt` and finds installed SDKs under
-// sdk_install_directory(). Holds `this` in its rows and its system, so it never moves.
+// sdk_install_directory(). The SDKs page also lists the SDKs of the engine's GitHub releases for this platform
+// (ReleaseFeed) and installs one on request (SdkInstaller): the downloads and the unpacking run as `curl` and `tar`
+// processes polled in the frame system, so the window stays responsive. Holds `this` in its rows and its system, so it
+// never moves.
 class LauncherApp final : public engine::GameBase {
 public:
     explicit LauncherApp(const engine::EngineServices& services);
@@ -42,6 +51,7 @@ public:
     void add_project();
     void new_project();
     void locate_sdk();
+    void refresh_available();
     void show_sdk_folder();
 
     // The New project page.
@@ -76,6 +86,16 @@ private:
     // In `sdk`, or the one sdk_for picks for the project's version.
     void open_project(std::size_t index, const SdkEntry* sdk = nullptr);
     void delete_sdk(std::size_t index);
+    // The Available list.
+    void start_install(const SdkRelease& release);
+    void finish_install(const InstallOutcome& outcome);
+    // Rebuilds the Available rows from the feed, the installed SDKs, and the install in progress.
+    void rebuild_available();
+    void rebuild_project_rows();
+    // Writes the progress of the running install on its row and the note above the list.
+    void show_install_progress();
+    void update_available_note();
+    [[nodiscard]] const AvailableSdk* find_available(std::string_view version) const;
     void show_folder(const std::filesystem::path& directory);
     // The SDK picked on the New project page, or nullptr.
     [[nodiscard]] const SdkEntry* picked_sdk() const;
@@ -94,6 +114,20 @@ private:
     engine::IWindowControl* windows_;
     engine::IProcessLauncher* processes_;
     std::shared_ptr<LauncherViewModel> view_model_;
+
+    // Two downloaders: the list of releases and an install run side by side.
+    CurlDownloader feed_downloader_;
+    CurlDownloader install_downloader_;
+    TarExtractor extractor_;
+    SdkInstaller installer_;
+    // Made in on_start, when the user data directory is known.
+    std::unique_ptr<ReleaseFeed> feed_;
+    unsigned feed_revision_ = 0;
+    std::vector<AvailableSdk> available_;
+    std::vector<std::shared_ptr<AvailableSdkRowViewModel>> available_rows_;
+    // Why the last install of `version` failed, shown on its row until the next try or the next list.
+    std::string failed_version_;
+    std::string failure_;
 
     // Empty when there is no user data directory: nothing is remembered.
     std::filesystem::path data_dir_;

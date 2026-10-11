@@ -23,7 +23,9 @@
                   <Label class="path" text="{binding path}"/>
                 </Stack>
                 <Label class="engine" text="{binding engineText}" var-tone="{binding tone}"/>
-                <Button class="open-button" command="{binding open}" content="Open"/>
+                <Button class="open-button slot" command="{binding open}" content="Open" var-display="{binding openDisplay}"/>
+                <Button class="install-button slot" command="{binding install}" content="{binding installLabel}"
+                        var-display="{binding installDisplay}"/>
                 <Button class="small-button" command="{binding remove}" content="Remove"/>
               </Stack>
             </ItemTemplate>
@@ -39,7 +41,10 @@
           <Button class="tool-button folder-button" command="{binding showSdkFolder}" content="Open folder"/>
           <Button class="tool-button locate-button" command="{binding locateSdk}" content="Locate…"/>
         </Stack>
-        <ScrollView class="box">
+        <Stack class="section-header" direction="horizontal">
+          <Label class="section-title" text="Installed"/>
+        </Stack>
+        <ScrollView class="box installed-box">
           <ItemsControl class="rows" items_source="{binding sdks}">
             <ItemTemplate>
               <Stack class="row" direction="horizontal">
@@ -62,6 +67,28 @@
                     </Stack>
                   </Popup>
                 </Button>
+              </Stack>
+            </ItemTemplate>
+          </ItemsControl>
+        </ScrollView>
+        <Stack class="section-header" direction="horizontal">
+          <Label class="section-title" text="Available"/>
+          <Label class="section-note" text="{binding availableNote}"/>
+          <Button class="small-button refresh-button" command="{binding refreshAvailable}" content="Refresh"/>
+        </Stack>
+        <ScrollView class="box available-box">
+          <ItemsControl class="rows" items_source="{binding available}">
+            <ItemTemplate>
+              <Stack class="row" direction="horizontal">
+                <Label class="version" text="{binding version}"/>
+                <Stack class="available-text" direction="vertical">
+                  <Label class="name" text="{binding detail}"/>
+                  <Label class="state" text="{binding state}" var-tone="{binding tone}"/>
+                </Stack>
+                <Button class="install-button slot" command="{binding install}" content="Install"
+                        var-display="{binding installDisplay}"/>
+                <Button class="small-button slot" command="{binding cancel}" content="Cancel"
+                        var-display="{binding cancelDisplay}"/>
               </Stack>
             </ItemTemplate>
           </ItemsControl>
